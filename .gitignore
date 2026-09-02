@@ -21,3 +21,5 @@ prisma/*.db-journal
 
 # OS
 Thumbs.db
+# TypeScript build info
+*.tsbuildinfo

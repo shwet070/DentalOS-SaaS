@@ -8,22 +8,117 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum UserRole { SUPER_ADMIN CLINIC_ADMIN DOCTOR STAFF PATIENT }
-enum MembershipStatus { ACTIVE INVITED SUSPENDED REMOVED }
-enum AppointmentStatus { PENDING CONFIRMED REJECTED RESCHEDULED CANCELLED NO_SHOW COMPLETED }
-enum AppointmentSource { STAFF PATIENT_PORTAL }
-enum TreatmentRecordStatus { ACTIVE AMENDED }
-enum TreatmentPlanStatus { DRAFT ACTIVE COMPLETED CANCELLED }
-enum PlannedTreatmentStatus { PLANNED IN_PROGRESS COMPLETED CANCELLED }
-enum PrescriptionStatus { DRAFT ISSUED COMPLETED CANCELLED }
-enum RefillRequestStatus { PENDING APPROVED REJECTED }
-enum DocumentType { PRESCRIPTION PATIENT_DOCUMENT TREATMENT_DOCUMENT OTHER }
-enum DocumentStatus { ACTIVE ARCHIVED }
-enum NotificationType { APPOINTMENT TREATMENT_PLAN PRESCRIPTION REFILL SYSTEM }
-enum AuditAction { CREATE UPDATE DELETE AMEND ISSUE COMPLETE CANCEL LOGIN LOGOUT DOWNLOAD PRINT GENERATE APPROVE REJECT RESCHEDULE OTHER }
-enum InvoiceStatus { DRAFT OPEN PAID FAILED CANCELLED REFUNDED }
-enum PaymentStatus { CREATED AUTHORIZED CAPTURED FAILED REFUNDED }
-enum SubscriptionStatus { TRIALING ACTIVE PAST_DUE PAUSED CANCELLED EXPIRED }
+enum UserRole {
+  SUPER_ADMIN
+  CLINIC_ADMIN
+  DOCTOR
+  STAFF
+  PATIENT
+}
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  REMOVED
+}
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  RESCHEDULED
+  CANCELLED
+  NO_SHOW
+  COMPLETED
+}
+enum AppointmentSource {
+  STAFF
+  PATIENT_PORTAL
+}
+enum TreatmentRecordStatus {
+  ACTIVE
+  AMENDED
+}
+enum TreatmentPlanStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+enum PlannedTreatmentStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+enum PrescriptionStatus {
+  DRAFT
+  ISSUED
+  COMPLETED
+  CANCELLED
+}
+enum RefillRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+enum DocumentType {
+  PRESCRIPTION
+  PATIENT_DOCUMENT
+  TREATMENT_DOCUMENT
+  OTHER
+}
+enum DocumentStatus {
+  ACTIVE
+  ARCHIVED
+}
+enum NotificationType {
+  APPOINTMENT
+  TREATMENT_PLAN
+  PRESCRIPTION
+  REFILL
+  SYSTEM
+}
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  AMEND
+  ISSUE
+  COMPLETE
+  CANCEL
+  LOGIN
+  LOGOUT
+  DOWNLOAD
+  PRINT
+  GENERATE
+  APPROVE
+  REJECT
+  RESCHEDULE
+  OTHER
+}
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+enum PaymentStatus {
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+}
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  PAUSED
+  CANCELLED
+  EXPIRED
+}
 
 model Tenant {
   id String @id @default(cuid())
@@ -36,6 +131,7 @@ model Tenant {
   memberships Membership[]
   patients Patient[]
   appointments Appointment[]
+  treatmentRecords TreatmentRecord[]
   treatmentPlans TreatmentPlan[]
   prescriptions Prescription[]
   documents Document[]
