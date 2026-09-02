@@ -8,408 +8,256 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// -----------------------------------------------------------------------------
-// Platform / tenancy
-// -----------------------------------------------------------------------------
-
-enum UserRole {
-  SUPER_ADMIN
-  CLINIC_ADMIN
-  DOCTOR
-  STAFF
-  PATIENT
-}
-
-enum MembershipStatus {
-  ACTIVE
-  INVITED
-  SUSPENDED
-  REMOVED
-}
-
-enum AppointmentStatus {
-  PENDING
-  CONFIRMED
-  REJECTED
-  RESCHEDULED
-  CANCELLED
-  NO_SHOW
-  COMPLETED
-}
-
-enum AppointmentSource {
-  STAFF
-  PATIENT_PORTAL
-}
-
-enum TreatmentRecordStatus {
-  ACTIVE
-  AMENDED
-}
-
-enum TreatmentPlanStatus {
-  DRAFT
-  ACTIVE
-  COMPLETED
-  CANCELLED
-}
-
-enum PlannedTreatmentStatus {
-  PLANNED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
-enum PrescriptionStatus {
-  DRAFT
-  ISSUED
-  COMPLETED
-  CANCELLED
-}
-
-enum RefillRequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum DocumentType {
-  PRESCRIPTION
-  PATIENT_DOCUMENT
-  TREATMENT_DOCUMENT
-  OTHER
-}
-
-enum DocumentStatus {
-  ACTIVE
-  ARCHIVED
-}
-
-enum NotificationType {
-  APPOINTMENT
-  TREATMENT_PLAN
-  PRESCRIPTION
-  REFILL
-  SYSTEM
-}
-
-enum AuditAction {
-  CREATE
-  UPDATE
-  DELETE
-  AMEND
-  ISSUE
-  COMPLETE
-  CANCEL
-  LOGIN
-  LOGOUT
-  DOWNLOAD
-  PRINT
-  GENERATE
-  APPROVE
-  REJECT
-  RESCHEDULE
-  OTHER
-}
-
-enum InvoiceStatus {
-  DRAFT
-  OPEN
-  PAID
-  FAILED
-  CANCELLED
-  REFUNDED
-}
-
-enum PaymentStatus {
-  CREATED
-  AUTHORIZED
-  CAPTURED
-  FAILED
-  REFUNDED
-}
-
-enum SubscriptionStatus {
-  TRIALING
-  ACTIVE
-  PAST_DUE
-  PAUSED
-  CANCELLED
-  EXPIRED
-}
+enum UserRole { SUPER_ADMIN CLINIC_ADMIN DOCTOR STAFF PATIENT }
+enum MembershipStatus { ACTIVE INVITED SUSPENDED REMOVED }
+enum AppointmentStatus { PENDING CONFIRMED REJECTED RESCHEDULED CANCELLED NO_SHOW COMPLETED }
+enum AppointmentSource { STAFF PATIENT_PORTAL }
+enum TreatmentRecordStatus { ACTIVE AMENDED }
+enum TreatmentPlanStatus { DRAFT ACTIVE COMPLETED CANCELLED }
+enum PlannedTreatmentStatus { PLANNED IN_PROGRESS COMPLETED CANCELLED }
+enum PrescriptionStatus { DRAFT ISSUED COMPLETED CANCELLED }
+enum RefillRequestStatus { PENDING APPROVED REJECTED }
+enum DocumentType { PRESCRIPTION PATIENT_DOCUMENT TREATMENT_DOCUMENT OTHER }
+enum DocumentStatus { ACTIVE ARCHIVED }
+enum NotificationType { APPOINTMENT TREATMENT_PLAN PRESCRIPTION REFILL SYSTEM }
+enum AuditAction { CREATE UPDATE DELETE AMEND ISSUE COMPLETE CANCEL LOGIN LOGOUT DOWNLOAD PRINT GENERATE APPROVE REJECT RESCHEDULE OTHER }
+enum InvoiceStatus { DRAFT OPEN PAID FAILED CANCELLED REFUNDED }
+enum PaymentStatus { CREATED AUTHORIZED CAPTURED FAILED REFUNDED }
+enum SubscriptionStatus { TRIALING ACTIVE PAST_DUE PAUSED CANCELLED EXPIRED }
 
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  isActive  Boolean  @default(true)
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  isActive Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  branches       Branch[]
-  memberships    Membership[]
-  patients       Patient[]
-  appointments   Appointment[]
+  branches Branch[]
+  memberships Membership[]
+  patients Patient[]
+  appointments Appointment[]
   treatmentPlans TreatmentPlan[]
-  prescriptions  Prescription[]
-  documents      Document[]
-  notifications  Notification[]
-  auditLogs      AuditLog[]
+  prescriptions Prescription[]
+  documents Document[]
+  notifications Notification[]
+  auditLogs AuditLog[]
+  settings TenantSetting?
+  subscription Subscription?
   dashboardTemplates DashboardTemplate[]
-  settings       TenantSetting?
-  subscription   Subscription?
-
   @@index([isActive])
 }
 
 model Branch {
-  id          String   @id @default(cuid())
-  tenantId    String
-  name        String
-  code        String
-  address     String?
-  phone       String?
-  email       String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  memberships         MembershipBranch[]
-  patients            Patient[]
-  appointments        Appointment[]
-  treatmentRecords    TreatmentRecord[]
-  treatmentPlans      TreatmentPlan[]
-  prescriptions       Prescription[]
-  documents           Document[]
-  auditLogs           AuditLog[]
-
+  id String @id @default(cuid())
+  tenantId String
+  name String
+  code String
+  address String?
+  phone String?
+  email String?
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  memberships MembershipBranch[]
+  patients Patient[]
+  appointments Appointment[]
+  treatmentRecords TreatmentRecord[]
+  treatmentPlans TreatmentPlan[]
+  prescriptions Prescription[]
+  documents Document[]
+  auditLogs AuditLog[]
   @@unique([tenantId, code])
   @@index([tenantId, isActive])
 }
 
 model TenantSetting {
-  id                         String  @id @default(cuid())
-  tenantId                   String  @unique
-  platformTimezone           String  @default("Asia/Kolkata")
-  allowMultiDoctorOverlap    Boolean @default(false)
-  allowConflictOverride      Boolean @default(false)
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
-
+  id String @id @default(cuid())
+  tenantId String @unique
+  platformTimezone String @default("Asia/Kolkata")
+  allowMultiDoctorOverlap Boolean @default(false)
+  allowConflictOverride Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
-// -----------------------------------------------------------------------------
-// Authentication / users / authorization
-// Better Auth-compatible core tables are kept separate from clinic membership.
-// -----------------------------------------------------------------------------
-
 model User {
-  id            String   @id
-  name          String
-  email         String   @unique
-  emailVerified Boolean  @default(false)
-  image         String?
-  phone         String?  @unique
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  sessions             Session[]
-  accounts             Account[]
-  memberships          Membership[]
-  membershipBranches   MembershipBranch[]
-  doctorProfile        DoctorProfile?
-  staffProfile         StaffProfile?
-  patientProfile       Patient?
-  createdAppointments  Appointment[] @relation("AppointmentCreatedBy")
+  id String @id
+  name String
+  email String @unique
+  emailVerified Boolean @default(false)
+  image String?
+  phone String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions Session[]
+  accounts Account[]
+  memberships Membership[]
+  doctorProfile DoctorProfile?
+  staffProfile StaffProfile?
+  patientProfile Patient?
+  createdAppointments Appointment[] @relation("AppointmentCreatedBy")
   assignedAppointments Appointment[] @relation("AppointmentDoctor")
-  treatmentRecords     TreatmentRecord[] @relation("TreatmentRecordAuthor")
-  treatmentPlans       TreatmentPlan[] @relation("TreatmentPlanCreator")
-  prescriptions        Prescription[] @relation("PrescriptionCreator")
+  treatmentRecords TreatmentRecord[] @relation("TreatmentRecordAuthor")
+  treatmentPlans TreatmentPlan[] @relation("TreatmentPlanCreator")
+  prescriptions Prescription[] @relation("PrescriptionCreator")
   prescriptionVersions PrescriptionVersion[]
-  refillRequests       RefillRequest[] @relation("RefillReviewedBy")
-  notifications        Notification[]
-  auditLogs            AuditLog[]
-  dashboardLayouts     DashboardLayout[]
+  refillRequests RefillRequest[] @relation("RefillReviewedBy")
+  notifications Notification[]
+  auditLogs AuditLog[]
+  dashboardLayouts DashboardLayout[]
   createdDashboardTemplates DashboardTemplate[] @relation("DashboardTemplateCreator")
-
-  @@index([phone])
 }
 
 model Session {
-  id        String   @id
+  id String @id
   expiresAt DateTime
-  token     String   @unique
+  token String @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ipAddress String?
   userAgent String?
-  userId    String
-
+  userId String
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([userId])
 }
 
 model Account {
-  id                    String   @id
-  accountId             String
-  providerId            String
-  userId                String
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
+  id String @id
+  accountId String
+  providerId String
+  userId String
+  accessToken String?
+  refreshToken String?
+  idToken String?
+  accessTokenExpiresAt DateTime?
   refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
+  scope String?
+  password String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@unique([providerId, accountId])
   @@index([userId])
 }
 
 model Verification {
-  id         String   @id
+  id String @id
   identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
+  value String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   @@index([identifier])
 }
 
 model Membership {
-  id        String           @id @default(cuid())
-  tenantId  String
-  userId    String
-  role      UserRole
-  status    MembershipStatus @default(ACTIVE)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id String @id @default(cuid())
+  tenantId String
+  userId String
+  role UserRole
+  status MembershipStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   branches MembershipBranch[]
-
   @@unique([tenantId, userId])
   @@index([tenantId, role, status])
 }
 
 model MembershipBranch {
-  id           String     @id @default(cuid())
+  id String @id @default(cuid())
   membershipId String
-  branchId     String
-  createdAt    DateTime   @default(now())
-
+  branchId String
+  createdAt DateTime @default(now())
   membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
-  branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  user       User?      @relation(fields: [membershipId, branchId], references: [id, id])
-
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
   @@unique([membershipId, branchId])
   @@index([branchId])
 }
 
 model DoctorProfile {
-  id             String   @id @default(cuid())
-  userId         String   @unique
+  id String @id @default(cuid())
+  userId String @unique
   professionalName String?
-  qualification  String?
+  qualification String?
   registrationNo String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model StaffProfile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  jobTitle  String?
+  id String @id @default(cuid())
+  userId String @unique
+  jobTitle String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// -----------------------------------------------------------------------------
-// Patients
-// -----------------------------------------------------------------------------
-
 model Patient {
-  id            String   @id @default(cuid())
-  tenantId      String
-  branchId      String
-  userId        String?  @unique
-  patientNumber String   @unique
-  firstName     String
-  lastName      String?
-  dateOfBirth   DateTime?
-  gender        String?
-  phone         String
-  email         String?
-  address       String?
-  notes         String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch            Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
-  appointments      Appointment[]
-  treatmentRecords  TreatmentRecord[]
-  treatmentPlans    TreatmentPlan[]
-  prescriptions     Prescription[]
-  documents         Document[]
-  notifications     Notification[]
-  refillRequests    RefillRequest[]
-
+  id String @id @default(cuid())
+  tenantId String
+  branchId String
+  userId String? @unique
+  patientNumber String @unique
+  firstName String
+  lastName String?
+  dateOfBirth DateTime?
+  gender String?
+  phone String
+  email String?
+  address String?
+  notes String?
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  appointments Appointment[]
+  treatmentRecords TreatmentRecord[]
+  treatmentPlans TreatmentPlan[]
+  prescriptions Prescription[]
+  documents Document[]
+  notifications Notification[]
+  refillRequests RefillRequest[]
   @@index([tenantId, branchId])
   @@index([tenantId, phone])
   @@index([branchId, lastName, firstName])
 }
 
-// -----------------------------------------------------------------------------
-// Appointments
-// -----------------------------------------------------------------------------
-
 model Appointment {
-  id                String            @id @default(cuid())
-  tenantId          String
-  branchId          String
-  patientId         String
-  doctorId          String
-  appointmentNumber String            @unique
-  startsAt          DateTime
-  endsAt            DateTime
-  status            AppointmentStatus @default(PENDING)
-  source            AppointmentSource @default(STAFF)
-  reason            String?
-  notes             String?
+  id String @id @default(cuid())
+  tenantId String
+  branchId String
+  patientId String
+  doctorId String
+  appointmentNumber String @unique
+  startsAt DateTime
+  endsAt DateTime
+  status AppointmentStatus @default(PENDING)
+  source AppointmentSource @default(STAFF)
+  reason String?
+  notes String?
   cancellationReason String?
-  cancelledAt       DateTime?
-  completedAt       DateTime?
-  createdById       String?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-
-  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch         Branch          @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  patient        Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  doctor         User            @relation("AppointmentDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
-  createdBy      User?           @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  history        AppointmentHistory[]
-  reminders      AppointmentReminder[]
+  cancelledAt DateTime?
+  completedAt DateTime?
+  createdById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctor User @relation("AppointmentDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
+  createdBy User? @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  history AppointmentHistory[]
+  reminders AppointmentReminder[]
   plannedTreatments PlannedTreatment[]
   treatmentRecords TreatmentRecord[]
-
   @@index([tenantId, branchId, startsAt])
   @@index([doctorId, startsAt, endsAt])
   @@index([patientId, startsAt])
@@ -417,455 +265,364 @@ model Appointment {
 }
 
 model AppointmentHistory {
-  id            String            @id @default(cuid())
+  id String @id @default(cuid())
   appointmentId String
-  status        AppointmentStatus
-  reason        String?
-  actorUserId   String?
-  createdAt     DateTime          @default(now())
-
+  status AppointmentStatus
+  reason String?
+  actorUserId String?
+  createdAt DateTime @default(now())
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-
   @@index([appointmentId, createdAt])
 }
 
 model AppointmentReminder {
-  id            String    @id @default(cuid())
+  id String @id @default(cuid())
   appointmentId String
-  scheduledFor  DateTime
-  sentAt        DateTime?
-  cancelledAt   DateTime?
-  createdAt     DateTime  @default(now())
-
+  scheduledFor DateTime
+  sentAt DateTime?
+  cancelledAt DateTime?
+  createdAt DateTime @default(now())
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-
   @@index([scheduledFor, cancelledAt])
-  @@index([appointmentId])
 }
 
-// -----------------------------------------------------------------------------
-// Treatment records / amendments
-// -----------------------------------------------------------------------------
-
 model TreatmentRecord {
-  id             String               @id @default(cuid())
-  tenantId       String
-  branchId       String
-  patientId      String
-  appointmentId  String?
-  authorUserId   String
-  originalId     String?
-  status         TreatmentRecordStatus @default(ACTIVE)
-  treatmentName  String
+  id String @id @default(cuid())
+  tenantId String
+  branchId String
+  patientId String
+  appointmentId String?
+  authorUserId String
+  originalId String?
+  status TreatmentRecordStatus @default(ACTIVE)
+  treatmentName String
   toothReference String?
-  treatmentDate  DateTime             @default(now())
-  notes          String?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-
-  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch       Branch           @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  patient      Patient          @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  appointment  Appointment?     @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  author       User             @relation("TreatmentRecordAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
-  original     TreatmentRecord? @relation("TreatmentAmendments", fields: [originalId], references: [id], onDelete: Restrict)
-  amendments   TreatmentRecord[] @relation("TreatmentAmendments")
-
+  treatmentDate DateTime @default(now())
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  author User @relation("TreatmentRecordAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  original TreatmentRecord? @relation("TreatmentAmendments", fields: [originalId], references: [id], onDelete: Restrict)
+  amendments TreatmentRecord[] @relation("TreatmentAmendments")
   @@index([tenantId, branchId, patientId, treatmentDate])
-  @@index([appointmentId])
   @@index([originalId])
 }
 
-// -----------------------------------------------------------------------------
-// Treatment plans
-// -----------------------------------------------------------------------------
-
 model TreatmentPlan {
-  id                String             @id @default(cuid())
-  tenantId          String
-  branchId          String
-  patientId         String
-  creatorDentistId  String
-  name              String
-  status            TreatmentPlanStatus @default(DRAFT)
-  startDate         DateTime?
-  endDate           DateTime?
+  id String @id @default(cuid())
+  tenantId String
+  branchId String
+  patientId String
+  creatorDentistId String
+  name String
+  status TreatmentPlanStatus @default(DRAFT)
+  startDate DateTime?
+  endDate DateTime?
   actualCompletionDate DateTime?
-  notes             String?
+  notes String?
   cancellationReason String?
-  cancelledAt       DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-
-  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch     Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  patient    Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  creator    User                @relation("TreatmentPlanCreator", fields: [creatorDentistId], references: [id], onDelete: Restrict)
+  cancelledAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  creator User @relation("TreatmentPlanCreator", fields: [creatorDentistId], references: [id], onDelete: Restrict)
   treatments PlannedTreatment[]
   statusHistory TreatmentPlanStatusHistory[]
-
   @@index([tenantId, branchId, patientId])
   @@index([creatorDentistId, status])
 }
 
 model PlannedTreatment {
-  id              String                 @id @default(cuid())
+  id String @id @default(cuid())
   treatmentPlanId String
-  appointmentId   String?                @unique
-  name            String
-  status          PlannedTreatmentStatus @default(PLANNED)
-  toothReference  String?
+  appointmentId String? @unique
+  name String
+  status PlannedTreatmentStatus @default(PLANNED)
+  toothReference String?
   cancellationReason String?
-  cancelledAt     DateTime?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-
+  cancelledAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   treatmentPlan TreatmentPlan @relation(fields: [treatmentPlanId], references: [id], onDelete: Cascade)
-  appointment  Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   @@index([treatmentPlanId, status])
 }
 
 model TreatmentPlanStatusHistory {
-  id              String             @id @default(cuid())
+  id String @id @default(cuid())
   treatmentPlanId String
-  status          TreatmentPlanStatus
-  changedById     String?
-  reason          String?
-  createdAt       DateTime           @default(now())
-
+  status TreatmentPlanStatus
+  changedById String?
+  reason String?
+  createdAt DateTime @default(now())
   treatmentPlan TreatmentPlan @relation(fields: [treatmentPlanId], references: [id], onDelete: Cascade)
-
   @@index([treatmentPlanId, createdAt])
 }
 
-// -----------------------------------------------------------------------------
-// Prescriptions / versions / refill workflow
-// -----------------------------------------------------------------------------
-
 model Prescription {
-  id                 String             @id @default(cuid())
-  tenantId           String
-  branchId           String
-  patientId          String
-  creatorDentistId   String
+  id String @id @default(cuid())
+  tenantId String
+  branchId String
+  patientId String
+  creatorDentistId String
   originalPrescriptionId String?
-  status             PrescriptionStatus @default(DRAFT)
-  prescriptionDate   DateTime           @default(now())
+  status PrescriptionStatus @default(DRAFT)
+  prescriptionDate DateTime @default(now())
   cancellationReason String?
-  cancelledAt        DateTime?
-  issuedAt           DateTime?
-  completedAt        DateTime?
-  currentVersion     Int                @default(1)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  patient      Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  creator      User          @relation("PrescriptionCreator", fields: [creatorDentistId], references: [id], onDelete: Restrict)
-  original     Prescription? @relation("PrescriptionRefills", fields: [originalPrescriptionId], references: [id], onDelete: SetNull)
-  refills      Prescription[] @relation("PrescriptionRefills")
-  medications  PrescriptionMedication[]
-  versions     PrescriptionVersion[]
-  documents    Document[]
+  cancelledAt DateTime?
+  issuedAt DateTime?
+  completedAt DateTime?
+  currentVersion Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  creator User @relation("PrescriptionCreator", fields: [creatorDentistId], references: [id], onDelete: Restrict)
+  original Prescription? @relation("PrescriptionRefills", fields: [originalPrescriptionId], references: [id], onDelete: SetNull)
+  refills Prescription[] @relation("PrescriptionRefills")
+  medications PrescriptionMedication[]
+  versions PrescriptionVersion[]
   statusHistory PrescriptionStatusHistory[]
+  documents Document[]
   refillRequests RefillRequest[] @relation("RefillSourcePrescription")
-
   @@index([tenantId, branchId, patientId, prescriptionDate])
   @@index([creatorDentistId, status])
-  @@index([originalPrescriptionId])
 }
 
 model PrescriptionMedication {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
   prescriptionId String
-  medicineName   String
-  dosage         String?
-  frequency      String?
-  duration       String?
-  instructions   String?
-  quantity       Decimal? @db.Decimal(12, 2)
-  unit           String?
-  sortOrder      Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
+  medicineName String
+  dosage String?
+  frequency String?
+  duration String?
+  instructions String?
+  quantity Decimal? @db.Decimal(12, 2)
+  unit String?
+  sortOrder Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
-
   @@index([prescriptionId, sortOrder])
 }
 
 model PrescriptionVersion {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
   prescriptionId String
-  version        Int
-  snapshot       Json
-  changedById    String
-  createdAt      DateTime @default(now())
-
+  version Int
+  snapshot Json
+  changedById String
+  createdAt DateTime @default(now())
   prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
-  changedBy    User         @relation(fields: [changedById], references: [id], onDelete: Restrict)
-
+  changedBy User @relation(fields: [changedById], references: [id], onDelete: Restrict)
   @@unique([prescriptionId, version])
-  @@index([prescriptionId, createdAt])
 }
 
 model PrescriptionStatusHistory {
-  id             String             @id @default(cuid())
+  id String @id @default(cuid())
   prescriptionId String
-  status         PrescriptionStatus
-  changedById    String?
-  reason         String?
-  createdAt      DateTime           @default(now())
-
+  status PrescriptionStatus
+  changedById String?
+  reason String?
+  createdAt DateTime @default(now())
   prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
-
   @@index([prescriptionId, createdAt])
 }
 
 model RefillRequest {
-  id                  String             @id @default(cuid())
-  tenantId            String
-  branchId             String
-  patientId            String
-  prescriptionId      String
-  reviewedById        String?
-  status              RefillRequestStatus @default(PENDING)
-  requestNote         String?
-  rejectionReason     String?
-  requestedAt         DateTime           @default(now())
-  reviewedAt          DateTime?
-  createdPrescriptionId String?          @unique
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-
-  patient             Patient      @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  prescription        Prescription @relation("RefillSourcePrescription", fields: [prescriptionId], references: [id], onDelete: Restrict)
-  reviewedBy          User?        @relation("RefillReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
-
+  id String @id @default(cuid())
+  tenantId String
+  branchId String
+  patientId String
+  prescriptionId String
+  reviewedById String?
+  status RefillRequestStatus @default(PENDING)
+  requestNote String?
+  rejectionReason String?
+  requestedAt DateTime @default(now())
+  reviewedAt DateTime?
+  createdPrescriptionId String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  prescription Prescription @relation("RefillSourcePrescription", fields: [prescriptionId], references: [id], onDelete: Restrict)
+  reviewedBy User? @relation("RefillReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
   @@index([tenantId, branchId, status, requestedAt])
-  @@index([patientId, requestedAt])
-  @@index([prescriptionId])
 }
-
-// -----------------------------------------------------------------------------
-// Documents / storage metadata
-// -----------------------------------------------------------------------------
 
 model Document {
-  id             String         @id @default(cuid())
-  tenantId       String
-  branchId       String
-  patientId      String
+  id String @id @default(cuid())
+  tenantId String
+  branchId String
+  patientId String
   prescriptionId String?
-  type           DocumentType
-  status         DocumentStatus @default(ACTIVE)
-  name           String
-  storageBucket  String
-  storagePath    String
-  mimeType       String
-  sizeBytes      BigInt?
-  version        Int            @default(1)
-  isLatest       Boolean        @default(true)
-  uploadedById   String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  patient      Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  type DocumentType
+  status DocumentStatus @default(ACTIVE)
+  name String
+  storageBucket String
+  storagePath String
+  mimeType String
+  sizeBytes BigInt?
+  version Int @default(1)
+  isLatest Boolean @default(true)
+  uploadedById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
   prescription Prescription? @relation(fields: [prescriptionId], references: [id], onDelete: SetNull)
-
   @@index([tenantId, branchId, patientId, isLatest])
-  @@index([prescriptionId, version])
 }
 
-// -----------------------------------------------------------------------------
-// Notifications / audit
-// -----------------------------------------------------------------------------
-
 model Notification {
-  id        String           @id @default(cuid())
-  tenantId  String
+  id String @id @default(cuid())
+  tenantId String
   patientId String?
-  userId    String?
-  type      NotificationType
-  title     String
-  message   String
-  readAt    DateTime?
-  createdAt DateTime         @default(now())
-
-  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId String?
+  type NotificationType
+  title String
+  message String
+  readAt DateTime?
+  createdAt DateTime @default(now())
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   patient Patient? @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  user    User? @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, readAt, createdAt])
   @@index([patientId, readAt, createdAt])
-  @@index([tenantId, createdAt])
 }
 
 model AuditLog {
-  id         String      @id @default(cuid())
-  tenantId   String?
-  branchId   String?
+  id String @id @default(cuid())
+  tenantId String?
+  branchId String?
   actorUserId String?
-  action     AuditAction
+  action AuditAction
   entityType String
-  entityId   String
-  reason     String?
-  metadata   Json?
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime    @default(now())
-
+  entityId String
+  reason String?
+  metadata Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  actor  User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
-
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
   @@index([tenantId, createdAt])
   @@index([tenantId, entityType, entityId])
-  @@index([actorUserId, createdAt])
 }
 
-// -----------------------------------------------------------------------------
-// Dashboard configuration
-// -----------------------------------------------------------------------------
-
 model DashboardTemplate {
-  id          String   @id @default(cuid())
-  tenantId    String?
-  name        String
-  role        UserRole?
-  isDefault   Boolean  @default(false)
+  id String @id @default(cuid())
+  tenantId String?
+  name String
+  role UserRole?
+  isDefault Boolean @default(false)
   createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tenant  Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  creator User?   @relation("DashboardTemplateCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator User? @relation("DashboardTemplateCreator", fields: [createdById], references: [id], onDelete: SetNull)
   widgets DashboardTemplateWidget[]
-  layouts  DashboardLayout[]
-
+  layouts DashboardLayout[]
   @@index([tenantId, role, isDefault])
 }
 
 model DashboardTemplateWidget {
-  id         String   @id @default(cuid())
+  id String @id @default(cuid())
   templateId String
-  widgetKey  String
-  position   Int
-  visible    Boolean  @default(true)
-  createdAt  DateTime @default(now())
-
+  widgetKey String
+  position Int
+  visible Boolean @default(true)
   template DashboardTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
   @@unique([templateId, widgetKey])
-  @@index([templateId, position])
 }
 
 model DashboardLayout {
-  id         String   @id @default(cuid())
-  userId     String
+  id String @id @default(cuid())
+  userId String
   templateId String?
-  deviceKey  String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceKey String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   template DashboardTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  widgets  DashboardLayoutWidget[]
-
+  widgets DashboardLayoutWidget[]
   @@unique([userId, deviceKey])
-  @@index([userId])
 }
 
 model DashboardLayoutWidget {
-  id         String   @id @default(cuid())
-  layoutId   String
-  widgetKey  String
-  position   Int
-  visible    Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
+  id String @id @default(cuid())
+  layoutId String
+  widgetKey String
+  position Int
+  visible Boolean @default(true)
   layout DashboardLayout @relation(fields: [layoutId], references: [id], onDelete: Cascade)
-
   @@unique([layoutId, widgetKey])
-  @@index([layoutId, position])
 }
 
-// -----------------------------------------------------------------------------
-// SaaS billing
-// -----------------------------------------------------------------------------
-
 model BillingPlan {
-  id          String   @id @default(cuid())
-  name        String
-  code        String   @unique
+  id String @id @default(cuid())
+  name String
+  code String @unique
   description String?
-  amount      Decimal  @db.Decimal(12, 2)
-  currency    String   @default("INR")
-  interval    String   @default("month")
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  amount Decimal @db.Decimal(12, 2)
+  currency String @default("INR")
+  interval String @default("month")
+  isActive Boolean @default(true)
   subscriptions Subscription[]
 }
 
 model Subscription {
-  id                   String             @id @default(cuid())
-  tenantId             String             @unique
-  planId               String
-  status               SubscriptionStatus @default(TRIALING)
-  provider             String?
-  providerSubscriptionId String?          @unique
-  currentPeriodStart   DateTime?
-  currentPeriodEnd     DateTime?
-  cancelAtPeriodEnd    Boolean            @default(false)
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
-
-  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  plan    BillingPlan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  id String @id @default(cuid())
+  tenantId String @unique
+  planId String
+  status SubscriptionStatus @default(TRIALING)
+  provider String?
+  providerSubscriptionId String? @unique
+  currentPeriodStart DateTime?
+  currentPeriodEnd DateTime?
+  cancelAtPeriodEnd Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan BillingPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
   invoices Invoice[]
-
-  @@index([planId, status])
 }
 
 model Invoice {
-  id                String        @id @default(cuid())
-  subscriptionId    String
-  invoiceNumber     String        @unique
-  amount            Decimal       @db.Decimal(12, 2)
-  currency          String        @default("INR")
-  status            InvoiceStatus @default(DRAFT)
-  dueAt             DateTime?
-  paidAt            DateTime?
-  providerInvoiceId String?       @unique
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
+  id String @id @default(cuid())
+  subscriptionId String
+  invoiceNumber String @unique
+  amount Decimal @db.Decimal(12, 2)
+  currency String @default("INR")
+  status InvoiceStatus @default(DRAFT)
+  dueAt DateTime?
+  paidAt DateTime?
+  providerInvoiceId String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  payments     Payment[]
-
-  @@index([subscriptionId, status])
+  payments Payment[]
 }
 
 model Payment {
-  id                String        @id @default(cuid())
-  invoiceId         String
-  amount            Decimal       @db.Decimal(12, 2)
-  currency          String        @default("INR")
-  status            PaymentStatus @default(CREATED)
-  provider          String?
-  providerPaymentId String?       @unique
-  paidAt            DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
+  id String @id @default(cuid())
+  invoiceId String
+  amount Decimal @db.Decimal(12, 2)
+  currency String @default("INR")
+  status PaymentStatus @default(CREATED)
+  provider String?
+  providerPaymentId String? @unique
+  paidAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  @@index([invoiceId, status])
 }
